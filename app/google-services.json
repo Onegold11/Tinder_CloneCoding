@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "658101262005",
+    "project_id": "tinder-clonecoding",
+    "storage_bucket": "tinder-clonecoding.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:658101262005:android:5cde0760789efc64d490fc",
+        "android_client_info": {
+          "package_name": "com.clonecoding.clonetinder"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "658101262005-hq0ucupkl9c57efev0au3pu2dt474n8b.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.clonecoding.clonetinder",
+            "certificate_hash": "a9edf9cf6bf81cf99b850663a7245ebdd108a25b"
+          }
+        },
+        {
+          "client_id": "658101262005-cpa2m2qlejpi8mkltt27l1sbd7lbj4mf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDVm26uzj2kt7uG61nt9bRLIThnMgTUxYA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "658101262005-cpa2m2qlejpi8mkltt27l1sbd7lbj4mf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
