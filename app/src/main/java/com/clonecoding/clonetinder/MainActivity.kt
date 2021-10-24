@@ -3,7 +3,7 @@ package com.clonecoding.clonetinder
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import com.clonecoding.clonetinder.ui.LoginActivity
+import com.clonecoding.clonetinder.ui.login.LoginActivity
 import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : AppCompatActivity() {

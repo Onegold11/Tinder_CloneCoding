@@ -1,5 +1,6 @@
-package com.clonecoding.clonetinder.ui
+package com.clonecoding.clonetinder.ui.login
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
@@ -9,6 +10,11 @@ import androidx.core.widget.addTextChangedListener
 import androidx.databinding.DataBindingUtil
 import com.clonecoding.clonetinder.R
 import com.clonecoding.clonetinder.databinding.ActivityLoginBinding
+import com.facebook.CallbackManager
+import com.facebook.FacebookCallback
+import com.facebook.FacebookException
+import com.facebook.login.LoginResult
+import com.google.firebase.auth.FacebookAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 
 /**
@@ -16,9 +22,20 @@ import com.google.firebase.auth.FirebaseAuth
  */
 class LoginActivity : AppCompatActivity() {
 
+    /**
+     * 뷰 바인딩
+     */
     private lateinit var binding: ActivityLoginBinding
 
+    /**
+     * 파이어베이스 권한 객체
+     */
     private lateinit var auth: FirebaseAuth
+
+    /**
+     * 페이스북 콜백 매니저
+     */
+    private lateinit var callbackManager: CallbackManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,12 +46,17 @@ class LoginActivity : AppCompatActivity() {
         binding.lifecycleOwner = this
 
         this.auth = FirebaseAuth.getInstance()
+        this.callbackManager = CallbackManager.Factory.create()
 
         this.initLoginButton()
         this.initSignUpButton()
+        this.initFacebookLoginButton()
         this.initEmailAndPasswordEditText()
     }
 
+    /**
+     * 이메일/비밀번호 뷰 초기화
+     */
     private fun initEmailAndPasswordEditText() {
 
         this.binding.emailEditText.addTextChangedListener {
@@ -51,6 +73,9 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * 로그인 버튼 초기화
+     */
     private fun initLoginButton() {
 
         val loginButton = this.binding.loginButton
@@ -75,6 +100,9 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * 회원 가입 버튼 초기화
+     */
     private fun initSignUpButton() {
 
         val signUpButton = this.binding.signUpButton
@@ -96,5 +124,43 @@ class LoginActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * 페이스북 로그인 버튼 초기화
+     */
+    private fun initFacebookLoginButton() {
+
+        val fbLoginButton = this.binding.facebookLoginButton
+
+        fbLoginButton.setPermissions("email", "public_profile")
+        fbLoginButton.registerCallback(this.callbackManager, object : FacebookCallback<LoginResult> {
+            
+            override fun onSuccess(result: LoginResult) {
+                // 로그인 성공
+                val credential = FacebookAuthProvider.getCredential(result.accessToken.token)
+                this@LoginActivity.auth.signInWithCredential(credential)
+                    .addOnCompleteListener(this@LoginActivity) {
+                        if(it.isSuccessful) {
+                            finish()
+                        } else {
+
+                            Toast.makeText(this@LoginActivity, "페이스북 로그인 실패", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+            }
+
+            override fun onCancel() {}
+
+            override fun onError(error: FacebookException?) {
+                Toast.makeText(this@LoginActivity, "페이스북 로그인 실패", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        this.callbackManager.onActivityResult(requestCode, resultCode, data)
     }
 }
