@@ -2,8 +2,6 @@ package com.clonecoding.clonetinder.ui.login
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.addTextChangedListener
@@ -16,6 +14,8 @@ import com.facebook.FacebookException
 import com.facebook.login.LoginResult
 import com.google.firebase.auth.FacebookAuthProvider
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.ktx.database
+import com.google.firebase.ktx.Firebase
 
 /**
  * 로그인 액티비티
@@ -91,7 +91,7 @@ class LoginActivity : AppCompatActivity() {
 
                 if (it.isSuccessful) {
 
-                    finish()
+                    handleSuccessLogin()
                 } else {
 
                     Toast.makeText(this, "로그인 실패", Toast.LENGTH_SHORT).show()
@@ -142,7 +142,8 @@ class LoginActivity : AppCompatActivity() {
                 this@LoginActivity.auth.signInWithCredential(credential)
                     .addOnCompleteListener(this@LoginActivity) {
                         if(it.isSuccessful) {
-                            finish()
+
+                            handleSuccessLogin()
                         } else {
 
                             Toast.makeText(this@LoginActivity, "페이스북 로그인 실패", Toast.LENGTH_SHORT).show()
@@ -156,6 +157,30 @@ class LoginActivity : AppCompatActivity() {
                 Toast.makeText(this@LoginActivity, "페이스북 로그인 실패", Toast.LENGTH_SHORT).show()
             }
         })
+    }
+
+    /**
+     * 로그인이 성공했을 때 호출
+     */
+    private fun handleSuccessLogin() {
+
+        if (this.auth.currentUser == null) {
+
+            Toast.makeText(this, "로그인에 실패했습니다.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val userId = this.auth.currentUser?.uid.orEmpty()
+        val currentUserDB = Firebase.database.reference
+            .child("Users")
+            .child(userId)
+        val user = mutableMapOf<String, Any>()
+
+        user["userId"] = userId
+
+        currentUserDB.updateChildren(user)
+
+        finish()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
