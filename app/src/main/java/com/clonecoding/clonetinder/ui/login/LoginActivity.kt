@@ -4,10 +4,11 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.widget.addTextChangedListener
 import androidx.databinding.DataBindingUtil
+import androidx.lifecycle.ViewModelProvider
 import com.clonecoding.clonetinder.R
 import com.clonecoding.clonetinder.databinding.ActivityLoginBinding
+import com.clonecoding.clonetinder.viewmodels.LoginViewModel
 import com.facebook.CallbackManager
 import com.facebook.FacebookCallback
 import com.facebook.FacebookException
@@ -21,6 +22,11 @@ import com.google.firebase.ktx.Firebase
  * 로그인 액티비티
  */
 class LoginActivity : AppCompatActivity() {
+
+    /**
+     * 뷰 모델
+     */
+    private lateinit var viewModel: LoginViewModel
 
     /**
      * 뷰 바인딩
@@ -40,14 +46,21 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // 뷰 모델
+        this.viewModel = ViewModelProvider(this)[LoginViewModel::class.java]
+
+        // 데이터 바인딩
         this.binding = DataBindingUtil.setContentView(
             this, R.layout.activity_login
         )
-        binding.lifecycleOwner = this
+        this.binding.lifecycleOwner = this
+        this.binding.viewModel = this.viewModel
 
+        // 파이어베이스
         this.auth = FirebaseAuth.getInstance()
         this.callbackManager = CallbackManager.Factory.create()
 
+        // 버튼 초기화
         this.initLoginButton()
         this.initSignUpButton()
         this.initFacebookLoginButton()
@@ -59,18 +72,24 @@ class LoginActivity : AppCompatActivity() {
      */
     private fun initEmailAndPasswordEditText() {
 
-        this.binding.emailEditText.addTextChangedListener {
-            val enable = this.binding.emailEditText.text.isNotEmpty() &&
-                    this.binding.passwordEditText.text.isNotEmpty()
-            this.binding.loginButton.isEnabled = enable
-            this.binding.signUpButton.isEnabled = enable
-        }
-        this.binding.passwordEditText.addTextChangedListener {
-            val enable = this.binding.emailEditText.text.isNotEmpty() &&
-                    this.binding.passwordEditText.text.isNotEmpty()
-            this.binding.loginButton.isEnabled = enable
-            this.binding.signUpButton.isEnabled = enable
-        }
+        this.viewModel.emailText.observe(this, {
+
+            this.saveButtonVisibleState()
+        })
+
+        this.viewModel.passwordText.observe(this, {
+
+            this.saveButtonVisibleState()
+        })
+    }
+
+    /**
+     * 버튼의 visible 상태를 저장합니다.
+     */
+    private fun saveButtonVisibleState() {
+
+        this.viewModel.isActiveButton.value = this.binding.emailEditText.text.isNotEmpty() &&
+                this.binding.passwordEditText.text.isNotEmpty()
     }
 
     /**
@@ -78,25 +97,19 @@ class LoginActivity : AppCompatActivity() {
      */
     private fun initLoginButton() {
 
-        val loginButton = this.binding.loginButton
-        loginButton.setOnClickListener {
+        this.viewModel.onLoginListener = { email: String, password: String ->
 
-            val emailEditText = this.binding.emailEditText
-            val passwordEditText = this.binding.passwordEditText
+            this.auth.signInWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this) {
 
-            this.auth.signInWithEmailAndPassword(
-                emailEditText.text.toString(),
-                passwordEditText.text.toString()
-            ).addOnCompleteListener(this) {
+                    if (it.isSuccessful) {
 
-                if (it.isSuccessful) {
+                        handleSuccessLogin()
+                    } else {
 
-                    handleSuccessLogin()
-                } else {
-
-                    Toast.makeText(this, "로그인 실패", Toast.LENGTH_SHORT).show()
+                        this.showToastMessage("로그인 실패")
+                    }
                 }
-            }
         }
     }
 
@@ -105,24 +118,19 @@ class LoginActivity : AppCompatActivity() {
      */
     private fun initSignUpButton() {
 
-        val signUpButton = this.binding.signUpButton
-        signUpButton.setOnClickListener {
+        this.viewModel.onSignUpListener = { email: String, password: String ->
 
-            val emailEditText = this.binding.emailEditText
-            val passwordEditText = this.binding.passwordEditText
+            this.auth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this) {
 
-            this.auth.createUserWithEmailAndPassword(
-                emailEditText.text.toString(),
-                passwordEditText.text.toString()
-            ).addOnCompleteListener(this) {
+                    if (it.isSuccessful) {
 
-                if(it.isSuccessful) {
-                    Toast.makeText(this, "회원가입 성공", Toast.LENGTH_SHORT).show()
-                } else {
+                        this.showToastMessage("회원가입 성공")
+                    } else {
 
-                    Toast.makeText(this, "회원가입 실패", Toast.LENGTH_SHORT).show()
+                        this.showToastMessage("회원가입 실패")
+                    }
                 }
-            }
         }
     }
 
@@ -134,29 +142,32 @@ class LoginActivity : AppCompatActivity() {
         val fbLoginButton = this.binding.facebookLoginButton
 
         fbLoginButton.setPermissions("email", "public_profile")
-        fbLoginButton.registerCallback(this.callbackManager, object : FacebookCallback<LoginResult> {
-            
-            override fun onSuccess(result: LoginResult) {
-                // 로그인 성공
-                val credential = FacebookAuthProvider.getCredential(result.accessToken.token)
-                this@LoginActivity.auth.signInWithCredential(credential)
-                    .addOnCompleteListener(this@LoginActivity) {
-                        if(it.isSuccessful) {
+        fbLoginButton.registerCallback(
+            this.callbackManager,
+            object : FacebookCallback<LoginResult> {
 
-                            handleSuccessLogin()
-                        } else {
+                override fun onSuccess(result: LoginResult) {
+                    // 로그인 성공
+                    val credential = FacebookAuthProvider.getCredential(result.accessToken.token)
+                    this@LoginActivity.auth.signInWithCredential(credential)
+                        .addOnCompleteListener(this@LoginActivity) {
+                            if (it.isSuccessful) {
 
-                            Toast.makeText(this@LoginActivity, "페이스북 로그인 실패", Toast.LENGTH_SHORT).show()
+                                handleSuccessLogin()
+                            } else {
+
+                                this@LoginActivity.showToastMessage("페이스북 로그인 실패")
+                            }
                         }
-                    }
-            }
+                }
 
-            override fun onCancel() {}
+                override fun onCancel() {}
 
-            override fun onError(error: FacebookException?) {
-                Toast.makeText(this@LoginActivity, "페이스북 로그인 실패", Toast.LENGTH_SHORT).show()
-            }
-        })
+                override fun onError(error: FacebookException?) {
+
+                    this@LoginActivity.showToastMessage("페이스북 로그인 실패")
+                }
+            })
     }
 
     /**
@@ -166,7 +177,7 @@ class LoginActivity : AppCompatActivity() {
 
         if (this.auth.currentUser == null) {
 
-            Toast.makeText(this, "로그인에 실패했습니다.", Toast.LENGTH_SHORT).show()
+            this.showToastMessage("로그인에 실패했습니다.")
             return
         }
 
@@ -181,6 +192,14 @@ class LoginActivity : AppCompatActivity() {
         currentUserDB.updateChildren(user)
 
         finish()
+    }
+
+    /**
+     * 토스트 메시지를 출력합니다.
+     */
+    private fun showToastMessage(message: String) {
+
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

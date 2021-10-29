@@ -28,6 +28,9 @@ class LikeActivity : AppCompatActivity() {
      */
     private var auth: FirebaseAuth = FirebaseAuth.getInstance()
 
+    /**
+     * Firebase Realtime Database 객체
+     */
     private lateinit var userDB: DatabaseReference
 
     override fun onCreate(savedInstanceState: Bundle?) {

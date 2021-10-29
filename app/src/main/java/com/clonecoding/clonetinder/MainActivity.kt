@@ -1,14 +1,20 @@
 package com.clonecoding.clonetinder
 
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 import com.clonecoding.clonetinder.ui.like.LikeActivity
 import com.clonecoding.clonetinder.ui.login.LoginActivity
 import com.google.firebase.auth.FirebaseAuth
 
+/**
+ * 메인 액티비티
+ */
 class MainActivity : AppCompatActivity() {
 
+    /**
+     * Firebase Auth 객체
+     */
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
