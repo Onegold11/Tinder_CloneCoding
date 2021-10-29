@@ -2,11 +2,14 @@ package com.clonecoding.clonetinder.ui.like
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.view.View
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.databinding.DataBindingUtil
 import com.clonecoding.clonetinder.R
+import com.clonecoding.clonetinder.adapters.CardItemAdapter
+import com.clonecoding.clonetinder.data.CardItem
 import com.clonecoding.clonetinder.databinding.ActivityLikeBinding
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
@@ -15,8 +18,11 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
+import com.yuyakaido.android.cardstackview.CardStackLayoutManager
+import com.yuyakaido.android.cardstackview.CardStackListener
+import com.yuyakaido.android.cardstackview.Direction
 
-class LikeActivity : AppCompatActivity() {
+class LikeActivity : AppCompatActivity(), CardStackListener {
 
     /**
      * 뷰 바인딩
@@ -32,6 +38,16 @@ class LikeActivity : AppCompatActivity() {
      * Firebase Realtime Database 객체
      */
     private lateinit var userDB: DatabaseReference
+
+    /**
+     * Card stack 어댑터
+     */
+    private val adapter = CardItemAdapter()
+
+    /**
+     * Card stack item 리스트
+     */
+    private val cardItems = mutableListOf<CardItem>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,11 +71,20 @@ class LikeActivity : AppCompatActivity() {
                 }
             }
 
-            override fun onCancelled(error: DatabaseError) {
-
-            }
+            override fun onCancelled(error: DatabaseError) {}
         })
 
+        this.initCardStackView()
+    }
+
+    /**
+     * Card stack view 초기화
+     */
+    private fun initCardStackView() {
+        
+        val stackView = this.binding.cardStackView
+        stackView.layoutManager = CardStackLayoutManager(this)
+        stackView.adapter = adapter
     }
 
     private fun showNameInputPopup() {
@@ -106,4 +131,18 @@ class LikeActivity : AppCompatActivity() {
 
         return this.auth.currentUser?.uid.orEmpty()
     }
+
+    override fun onCardDragging(direction: Direction?, ratio: Float) {}
+
+    override fun onCardSwiped(direction: Direction?) {
+
+    }
+
+    override fun onCardRewound() {}
+
+    override fun onCardCanceled() {}
+
+    override fun onCardAppeared(view: View?, position: Int) {}
+
+    override fun onCardDisappeared(view: View?, position: Int) {}
 }
