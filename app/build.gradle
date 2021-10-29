@@ -58,4 +58,8 @@ dependencies {
 
     // LiveData
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.4.0"
+
+    // SwipeView
+    implementation "com.yuyakaido.android:card-stack-view:2.3.4"
+
 }
