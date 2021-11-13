@@ -1,128 +1,97 @@
 package com.clonecoding.clonetinder.ui.like
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
+import androidx.lifecycle.ViewModelProvider
 import com.clonecoding.clonetinder.R
 import com.clonecoding.clonetinder.adapters.CardItemAdapter
-import com.clonecoding.clonetinder.data.CardItem
 import com.clonecoding.clonetinder.databinding.ActivityLikeBinding
-import com.google.firebase.auth.FirebaseAuth
+import com.clonecoding.clonetinder.viewmodels.LikeViewModel
 import com.google.firebase.database.*
-import com.google.firebase.database.ktx.database
-import com.google.firebase.ktx.Firebase
 import com.yuyakaido.android.cardstackview.CardStackLayoutManager
 import com.yuyakaido.android.cardstackview.CardStackListener
 import com.yuyakaido.android.cardstackview.Direction
 
+/**
+ * Like 액티비티
+ */
 class LikeActivity : AppCompatActivity(), CardStackListener {
 
-    /**
-     * 뷰 바인딩
-     */
+    // 뷰 모델
+    private lateinit var viewModel: LikeViewModel
+
+    // 뷰 바인딩
     private lateinit var binding: ActivityLikeBinding
 
-    /**
-     * 파이어베이스 객체
-     */
-    private var auth: FirebaseAuth = FirebaseAuth.getInstance()
+    // 카드 Stack 어댑터
+    private val adapter by lazy {
 
-    /**
-     * Firebase Realtime Database 객체
-     */
-    private lateinit var userDB: DatabaseReference
+        CardItemAdapter()
+    }
 
-    /**
-     * Card stack 어댑터
-     */
-    private val adapter = CardItemAdapter()
-
-    /**
-     * Card stack layout manager
-     */
+    // 카드 Stack 레이아웃 매니저
     private val manager by lazy {
 
         CardStackLayoutManager(this, this)
     }
 
-    /**
-     * Card stack item 리스트
-     */
-    private val cardItems = mutableListOf<CardItem>()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 뷰 바인딩
+        this.initDataBinding()
+
+        // 뷰 모델
+        this.initViewModel()
+
+        // 카드 스택 뷰 초기화
+        this.initCardStackView()
+    }
+
+    /**
+     * 데이터 바인딩 설정
+     */
+    private fun initDataBinding() {
+
         this.binding = DataBindingUtil.setContentView(
             this, R.layout.activity_like
         )
         this.binding.lifecycleOwner = this
-
-        userDB = Firebase.database.reference
-            .child("Users")
-        val currentUserDB = userDB.child(
-            this.getCurrentUserID()
-        )
-        currentUserDB.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-
-                if (snapshot.child("name").value == null) {
-
-                    showNameInputPopup()
-                    return
-                }
-
-                this@LikeActivity.getUnSelectedUsers()
-            }
-
-            override fun onCancelled(error: DatabaseError) {}
-        })
-
-        this.initCardStackView()
     }
 
-    private fun getUnSelectedUsers() {
+    /**
+     * 뷰 모델 초기화
+     */
+    private fun initViewModel() {
 
-        this.userDB.addChildEventListener(object: ChildEventListener {
+        this.viewModel = ViewModelProvider(this)[LikeViewModel::class.java]
+        this.viewModel.initCurrentUserDB()
+        this.viewModel.initUserDB()
 
-            override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
+        this.viewModel.uid.observe(this, {
 
-                if (snapshot.child("userId").value != getCurrentUserID()
-                    && snapshot.child("likedBy").child("like").hasChild(getCurrentUserID())
-                    && snapshot.child("likedBy").child("disLike").hasChild(getCurrentUserID()).not()) {
-
-                    val userId = snapshot.child("userId").value.toString()
-                    var name = "undecided"
-                    if (snapshot.child("name").value != null) {
-
-                        name = snapshot.child("name").value.toString()
-                    }
-
-                    cardItems.add(CardItem(userId, name))
-                    adapter.submitList(cardItems)
-                    adapter.notifyDataSetChanged()
-                }
+            if (it == null) {
+                Toast.makeText(this, "로그인이 되어있지 않습니다.", Toast.LENGTH_SHORT).show()
+                finish()
             }
+        })
 
-            override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {
+        this.viewModel.userName.observe(this, {
 
-                cardItems.find { it.userId == snapshot.key}?.let {
-
-                    it.name = snapshot.child("name").value.toString()
-                }
-
-                adapter.submitList(cardItems)
-                adapter.notifyDataSetChanged()
+            if (it == null) {
+                this@LikeActivity.showNameInputPopup()
             }
+        })
 
-            override fun onChildRemoved(snapshot: DataSnapshot) {}
+        this.viewModel.cardItems.observe(this, {
 
-            override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {}
-
-            override fun onCancelled(error: DatabaseError) {}
+            this@LikeActivity.adapter.submitList(it)
+            this@LikeActivity.adapter.notifyDataSetChanged()
         })
     }
 
@@ -130,12 +99,15 @@ class LikeActivity : AppCompatActivity(), CardStackListener {
      * Card stack view 초기화
      */
     private fun initCardStackView() {
-        
+
         val stackView = this.binding.cardStackView
         stackView.layoutManager = this.manager
         stackView.adapter = this.adapter
     }
 
+    /**
+     * 처음 접속 시 이름을 설정하는 창 출력
+     */
     private fun showNameInputPopup() {
 
         val editText = EditText(this)
@@ -143,44 +115,18 @@ class LikeActivity : AppCompatActivity(), CardStackListener {
         AlertDialog.Builder(this)
             .setTitle("이름을 입력해주세요")
             .setView(editText)
-            .setPositiveButton("저장"){_, _ ->
+            .setPositiveButton("저장") { _, _ ->
 
                 if (editText.text.isEmpty()) {
 
                     showNameInputPopup()
                 } else {
 
-                    saveUserName(editText.text.toString())
+                    this.viewModel.saveUserName(editText.text.toString())
                 }
             }
             .setCancelable(false)
             .show()
-    }
-
-    private fun saveUserName(name: String) {
-
-        val userId = this.getCurrentUserID()
-        val currentUserDB = this.userDB
-            .child(userId)
-        val user = mutableMapOf<String, Any>()
-
-        user["userId"] = userId
-        user["name"] = name
-
-        currentUserDB.updateChildren(user)
-
-        this.getUnSelectedUsers()
-    }
-
-    private fun getCurrentUserID(): String {
-
-        if (this.auth.currentUser == null) {
-
-            Toast.makeText(this, "로그인이 되어있지 않습니다.", Toast.LENGTH_SHORT).show()
-            finish()
-        }
-
-        return this.auth.currentUser?.uid.orEmpty()
     }
 
     /**
@@ -188,16 +134,11 @@ class LikeActivity : AppCompatActivity(), CardStackListener {
      */
     private fun like() {
 
-        val card = this.cardItems[this.manager.topPosition - 1]
+        val card = this.viewModel.likeFriend(this.manager.topPosition - 1)
 
-        this.cardItems.removeFirst()
-        this.userDB.child(card.userId)
-            .child("likedBy")
-            .child("like")
-            .child(getCurrentUserID())
-            .setValue(true)
-
-        Toast.makeText(this, "${card.name}님을 Like 하셨습니다.", Toast.LENGTH_SHORT).show()
+        card?.let {
+            Toast.makeText(this, "${it.name}님을 Like 하셨습니다.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     /**
@@ -205,16 +146,11 @@ class LikeActivity : AppCompatActivity(), CardStackListener {
      */
     private fun disLike() {
 
-        val card = this.cardItems[this.manager.topPosition - 1]
+        val card = this.viewModel.dislikeFriend(this.manager.topPosition - 1)
 
-        this.cardItems.removeFirst()
-        this.userDB.child(card.userId)
-            .child("likedBy")
-            .child("disLike")
-            .child(getCurrentUserID())
-            .setValue(true)
-
-        Toast.makeText(this, "${card.name}님을 Dislike 하셨습니다.", Toast.LENGTH_SHORT).show()
+        card?.let {
+            Toast.makeText(this, "${it.name}님을 Dislike 하셨습니다.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onCardDragging(direction: Direction?, ratio: Float) {}
@@ -224,15 +160,25 @@ class LikeActivity : AppCompatActivity(), CardStackListener {
         when (direction) {
             Direction.Right -> like()
             Direction.Left -> disLike()
-            else -> {}
+            else -> {
+                return
+            }
         }
     }
 
-    override fun onCardRewound() {}
+    override fun onCardRewound() {
+        return
+    }
 
-    override fun onCardCanceled() {}
+    override fun onCardCanceled() {
+        return
+    }
 
-    override fun onCardAppeared(view: View?, position: Int) {}
+    override fun onCardAppeared(view: View?, position: Int) {
+        return
+    }
 
-    override fun onCardDisappeared(view: View?, position: Int) {}
+    override fun onCardDisappeared(view: View?, position: Int) {
+        return
+    }
 }
