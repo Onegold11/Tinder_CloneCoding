@@ -2,7 +2,7 @@ package com.clonecoding.clonetinder.repository
 
 import androidx.lifecycle.MutableLiveData
 import com.clonecoding.clonetinder.data.CardItem
-import com.clonecoding.clonetinder.util.DBConstants
+import com.clonecoding.clonetinder.constatns.DBConstants
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.ChildEventListener
 import com.google.firebase.database.DataSnapshot
@@ -16,7 +16,7 @@ import com.google.firebase.ktx.Firebase
  */
 class UserRepository(
     private val uid: MutableLiveData<String?>
-){
+) {
 
     // 데이터베이스 루트
     private val dbRoot = Firebase.database.reference
@@ -44,18 +44,19 @@ class UserRepository(
 
         uid.value = currentUser.uid
 
-        this.userDB.child(this.uid.value!!).addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
+        this.userDB.child(this.uid.value!!)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
 
-                if (snapshot.child("name").value == null) {
+                    if (snapshot.child(DBConstants.NAME).value == null) {
 
-                    userName.value = null
-                    return
+                        userName.value = null
+                        return
+                    }
                 }
-            }
 
-            override fun onCancelled(error: DatabaseError) {}
-        })
+                override fun onCancelled(error: DatabaseError) {}
+            })
     }
 
     /**
@@ -66,7 +67,7 @@ class UserRepository(
         cardItems: MutableLiveData<MutableList<CardItem>>
     ) {
 
-        this.userDB.addChildEventListener(object: ChildEventListener {
+        this.userDB.addChildEventListener(object : ChildEventListener {
 
             override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
 
@@ -80,15 +81,16 @@ class UserRepository(
 
                 val currentUserId = currentUser.uid
 
-                if (snapshot.child("userId").value != currentUserId
-                    && snapshot.child("likedBy").child("like").hasChild(currentUserId).not()
-                    && snapshot.child("likedBy").child("disLike").hasChild(currentUserId).not()) {
+                if (snapshot.child(DBConstants.USER_ID).value != currentUserId
+                    && snapshot.child(DBConstants.LIKED_BY).child(DBConstants.LIKE).hasChild(currentUserId).not()
+                    && snapshot.child(DBConstants.LIKED_BY).child(DBConstants.DIS_LIKE).hasChild(currentUserId).not()
+                ) {
 
-                    val userId = snapshot.child("userId").value.toString()
-                    var name = "undecided"
-                    if (snapshot.child("name").value != null) {
+                    val userId = snapshot.child(DBConstants.USER_ID).value.toString()
+                    var name = DBConstants.NAME_UNDECIDED
+                    if (snapshot.child(DBConstants.NAME).value != null) {
 
-                        name = snapshot.child("name").value.toString()
+                        name = snapshot.child(DBConstants.NAME).value.toString()
                     }
 
                     _cardItems.add(CardItem(userId, name))
@@ -100,7 +102,7 @@ class UserRepository(
 
                 cardItems.value?.find { it.userId == snapshot.key }?.let {
 
-                    it.name = snapshot.child("name").value.toString()
+                    it.name = snapshot.child(DBConstants.NAME).value.toString()
                 }
             }
 
@@ -111,7 +113,58 @@ class UserRepository(
             override fun onCancelled(error: DatabaseError) {}
         })
     }
-    
+
+    fun setMatchUserCallback(
+        _cardItems: MutableList<CardItem>,
+        cardItems: MutableLiveData<MutableList<CardItem>>
+    ) {
+
+        getCurrentUserID()?.let { userDB.child(it).child(DBConstants.LIKED_BY).child(DBConstants.MATCH) }
+            ?.addChildEventListener(object : ChildEventListener {
+                override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
+
+                    if (snapshot.key?.isNotEmpty() == true) {
+
+                        getUserByKey(snapshot.key.orEmpty(), _cardItems)
+                        cardItems.value = _cardItems
+                    }
+                }
+
+                override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {
+                    TODO("Not yet implemented")
+                }
+
+                override fun onChildRemoved(snapshot: DataSnapshot) {
+                    TODO("Not yet implemented")
+                }
+
+                override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {
+                    TODO("Not yet implemented")
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    TODO("Not yet implemented")
+                }
+            })
+    }
+
+    private fun getUserByKey(
+        userId: String,
+        _cardItems: MutableList<CardItem>,
+    ) {
+
+        this.userDB.child(userId).addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+
+                _cardItems.add(CardItem(userId, snapshot.child(DBConstants.NAME).value.toString()))
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                TODO("Not yet implemented")
+            }
+        })
+    }
+
     /**
      * 사용자의 이름을 저장
      *
@@ -127,8 +180,8 @@ class UserRepository(
                 .child(it)
 
             val user = mutableMapOf<String, Any>()
-            user["userId"] = it
-            user["name"] = name
+            user[DBConstants.USER_ID] = it
+            user[DBConstants.NAME] = name
 
             currentUserDB.updateChildren(user)
         }
@@ -145,8 +198,8 @@ class UserRepository(
 
         uid?.let {
             this.userDB.child(item.userId)
-                .child("likedBy")
-                .child("like")
+                .child(DBConstants.LIKED_BY)
+                .child(DBConstants.LIKE)
                 .child(it)
                 .setValue(true)
         }
@@ -163,8 +216,8 @@ class UserRepository(
 
         uid?.let {
             this.userDB.child(item.userId)
-                .child("likedBy")
-                .child("disLike")
+                .child(DBConstants.LIKED_BY)
+                .child(DBConstants.DIS_LIKE)
                 .child(uid)
                 .setValue(true)
         }
@@ -185,5 +238,44 @@ class UserRepository(
 
         this.uid.value = this.auth.currentUser?.uid.orEmpty()
         return this.uid.value
+    }
+
+    fun saveMatchIfOtherUserLikeMe(otherUserId: String) {
+
+        getCurrentUserID()?.let {
+            this.userDB
+                .child(it)
+                .child(DBConstants.LIKED_BY)
+                .child(DBConstants.LIKE)
+                .child(otherUserId)
+        }?.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+
+                if (snapshot.value == true) {
+
+                    getCurrentUserID()?.let {
+                        this@UserRepository.userDB
+                            .child(it)
+                            .child(DBConstants.LIKED_BY)
+                            .child(DBConstants.MATCH)
+                            .child(otherUserId)
+                            .setValue(true)
+                    }
+
+                    getCurrentUserID()?.let {
+                        this@UserRepository.userDB
+                            .child(otherUserId)
+                            .child(DBConstants.LIKED_BY)
+                            .child(DBConstants.MATCH)
+                            .child(it)
+                            .setValue(true)
+                    }
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                TODO("Not yet implemented")
+            }
+        })
     }
 }

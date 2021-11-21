@@ -1,4 +1,4 @@
-package com.clonecoding.clonetinder.ui.login
+package com.clonecoding.clonetinder.ui.activity
 
 import android.content.Intent
 import android.os.Bundle

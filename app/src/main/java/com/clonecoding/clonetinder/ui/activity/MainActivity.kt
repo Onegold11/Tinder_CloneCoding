@@ -1,10 +1,9 @@
-package com.clonecoding.clonetinder
+package com.clonecoding.clonetinder.ui.activity
 
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.clonecoding.clonetinder.ui.like.LikeActivity
-import com.clonecoding.clonetinder.ui.login.LoginActivity
+import com.clonecoding.clonetinder.R
 import com.google.firebase.auth.FirebaseAuth
 
 /**
@@ -33,6 +32,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(
                 Intent(this, LikeActivity::class.java)
             )
+            finish()
         }
     }
 }

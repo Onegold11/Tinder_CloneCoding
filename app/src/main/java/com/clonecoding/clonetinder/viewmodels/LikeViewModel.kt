@@ -65,6 +65,7 @@ class LikeViewModel : ViewModel(){
         this.cardItems.value = this._cardItems
 
         this.repository.likeFriend(card)
+        this.repository.saveMatchIfOtherUserLikeMe(card.userId)
 
         return card
     }

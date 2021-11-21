@@ -1,5 +1,6 @@
-package com.clonecoding.clonetinder.ui.like
+package com.clonecoding.clonetinder.ui.activity
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.EditText
@@ -12,7 +13,9 @@ import com.clonecoding.clonetinder.R
 import com.clonecoding.clonetinder.adapters.CardItemAdapter
 import com.clonecoding.clonetinder.databinding.ActivityLikeBinding
 import com.clonecoding.clonetinder.viewmodels.LikeViewModel
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
+import com.google.firebase.ktx.Firebase
 import com.yuyakaido.android.cardstackview.CardStackLayoutManager
 import com.yuyakaido.android.cardstackview.CardStackListener
 import com.yuyakaido.android.cardstackview.Direction
@@ -62,6 +65,18 @@ class LikeActivity : AppCompatActivity(), CardStackListener {
             this, R.layout.activity_like
         )
         this.binding.lifecycleOwner = this
+
+        this.binding.matchListButton.setOnClickListener {
+
+            startActivity(Intent(this, MatchedUserActivity::class.java))
+        }
+
+        this.binding.signOutButton.setOnClickListener {
+
+            FirebaseAuth.getInstance().signOut()
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
+        }
     }
 
     /**
@@ -76,7 +91,7 @@ class LikeActivity : AppCompatActivity(), CardStackListener {
         this.viewModel.uid.observe(this, {
 
             if (it == null) {
-                Toast.makeText(this, "로그인이 되어있지 않습니다.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.not_login, Toast.LENGTH_SHORT).show()
                 finish()
             }
         })
@@ -113,9 +128,9 @@ class LikeActivity : AppCompatActivity(), CardStackListener {
         val editText = EditText(this)
 
         AlertDialog.Builder(this)
-            .setTitle("이름을 입력해주세요")
+            .setTitle(R.string.write_name)
             .setView(editText)
-            .setPositiveButton("저장") { _, _ ->
+            .setPositiveButton(R.string.save_name) { _, _ ->
 
                 if (editText.text.isEmpty()) {
 
